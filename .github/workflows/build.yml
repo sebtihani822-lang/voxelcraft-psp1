@@ -9,6 +9,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fix code header
+        run: |
+          sed -i '1i #include <stdlib.h>' source/player.c
+
       - name: Build project
         run: |
           make
