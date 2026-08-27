@@ -9,15 +9,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ISO Tools
+        run: |
+          apt-get update && apt-get install -y genisoimage
+
       - name: Fix code header
         run: |
           sed -i '1i #include <stdlib.h>' source/player.c
 
-      - name: Build project
+      - name: Build project and ISO
         run: |
           make
           pack-pbp EBOOT.PBP PARAM.SFO NULL NULL NULL NULL NULL DATA.PSP
-          genisoimage -o game.iso EBOOT.PBP
+          mkdir -p iso_structure/PSP_GAME/SYSDIR/
+          cp PARAM.SFO iso_structure/PSP_GAME/
+          cp DATA.PSP iso_structure/PSP_GAME/SYSDIR/EBOOT.BIN
+          genisoimage -A "PSP GAME" -V "GAME" -sysid "PSP" -o game.iso iso_structure
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4
