@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install ISO Tools
+      - name: Install mkisofs
         run: |
           apt-get update && apt-get install -y genisoimage
 
@@ -17,14 +17,13 @@ jobs:
         run: |
           sed -i '1i #include <stdlib.h>' source/player.c
 
-      - name: Build project and ISO
+      - name: Build project and create ISO
         run: |
           make
-          pack-pbp EBOOT.PBP PARAM.SFO NULL NULL NULL NULL NULL DATA.PSP
-          mkdir -p iso_structure/PSP_GAME/SYSDIR/
-          cp PARAM.SFO iso_structure/PSP_GAME/
-          cp DATA.PSP iso_structure/PSP_GAME/SYSDIR/EBOOT.BIN
-          genisoimage -A "PSP GAME" -V "GAME" -sysid "PSP" -o game.iso iso_structure
+          mkdir -p iso_root/PSP_GAME/SYSDIR
+          mksfo "VoxelCraft" iso_root/PSP_GAME/PARAM.SFO
+          cp EBOOT.PBP iso_root/PSP_GAME/SYSDIR/BOOT.BIN
+          genisoimage -o game.iso -iso-level 4 iso_root
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4
