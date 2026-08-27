@@ -5,41 +5,23 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: pspdev/pspdev:latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fix code header
+      - name: Build PSP Project inside Container
+        uses: addaction/docker-action@v1
+        with:
+          image: pspdev/pspdev:latest
+          run: |
+            sed -i '1i #include <stdlib.h>' source/player.c
+            make
+
+      - name: Create ISO Image
         run: |
-          sed -i '1i #include <stdlib.h>' source/player.c
-
-      - name: Build project and generate ISO
-        run: |
-          make
-          python3 -c '
-import os, struct
-
-def create_simple_iso(output_filename):
-    sector_size = 2048
-    system_area = b"\x00" * (16 * sector_size)
-    
-    # Primary Volume Descriptor
-    pvd = bytearray(sector_size)
-    pvd[0] = 1 # Type
-    pvd[1:6] = b"CD001"
-    pvd[6] = 1 # Version
-    pvd[40:72] = "PSP GAME".ljust(32).encode("ascii")
-    pvd[80:88] = struct.pack("<I", 18) + struct.pack(">I", 18) # Volume Space Size
-    pvd[120:124] = struct.pack("<H", 1) + struct.pack(">H", 1) # Logical Block Size
-    pvd[128:132] = struct.pack("<I", 2048) + struct.pack(">I", 2048)
-    
-    volume_space = system_area + bytes(pvd) + (b"\xFF" + b"CD001" + b"\x01\x00" + b"\x00"*2041)
-    
-    with open(output_filename, "wb") as f:
-        f.write(volume_space)
-
-create_simple_iso("game.iso")
-'
+          sudo apt-get update && sudo apt-get install -y genisoimage
+          mkdir -p iso_root/PSP_GAME/SYSDIR
+          cp EBOOT.PBP iso_root/PSP_GAME/SYSDIR/EBOOT.BIN
+          genisoimage -A "PSP GAME" -V "GAME" -sysid "PSP" -o game.iso iso_root
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4
