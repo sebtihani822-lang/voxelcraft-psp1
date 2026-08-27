@@ -1,4 +1,4 @@
-name: Build PSP EBOOT
+name: Build PSP ISO
 
 on: [push]
 
@@ -16,9 +16,11 @@ jobs:
       - name: Build project
         run: |
           make
+          pack-pbp EBOOT.PBP PARAM.SFO NULL NULL NULL NULL NULL DATA.PSP
+          genisoimage -o game.iso EBOOT.PBP
 
-      - name: Upload EBOOT
+      - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:
-          name: EBOOT-PBP
-          path: EBOOT.PBP
+          name: PSP-ISO-File
+          path: game.iso
