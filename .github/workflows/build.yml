@@ -1,4 +1,4 @@
-name: Build PSP EBOOT
+name: Build PSP ISO
 
 on: [push]
 
@@ -13,12 +13,36 @@ jobs:
         run: |
           sed -i '1i #include <stdlib.h>' source/player.c
 
-      - name: Build project
+      - name: Build project and generate ISO
         run: |
           make
+          python3 -c '
+import os, struct
 
-      - name: Upload EBOOT
+def create_simple_iso(output_filename):
+    sector_size = 2048
+    system_area = b"\x00" * (16 * sector_size)
+    
+    # Primary Volume Descriptor
+    pvd = bytearray(sector_size)
+    pvd[0] = 1 # Type
+    pvd[1:6] = b"CD001"
+    pvd[6] = 1 # Version
+    pvd[40:72] = "PSP GAME".ljust(32).encode("ascii")
+    pvd[80:88] = struct.pack("<I", 18) + struct.pack(">I", 18) # Volume Space Size
+    pvd[120:124] = struct.pack("<H", 1) + struct.pack(">H", 1) # Logical Block Size
+    pvd[128:132] = struct.pack("<I", 2048) + struct.pack(">I", 2048)
+    
+    volume_space = system_area + bytes(pvd) + (b"\xFF" + b"CD001" + b"\x01\x00" + b"\x00"*2041)
+    
+    with open(output_filename, "wb") as f:
+        f.write(volume_space)
+
+create_simple_iso("game.iso")
+'
+
+      - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:
-          name: EBOOT-PBP
-          path: EBOOT.PBP
+          name: PSP-ISO-File
+          path: game.iso
